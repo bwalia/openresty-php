@@ -15,6 +15,7 @@ RUN chmod +x /usr/local/bin/install-php-extensions && sync && install-php-extens
         xlswriter \
         uuid \
         zip \
+        yaml \
 	mailparse
 
 # Custom php.ini config
@@ -229,7 +230,6 @@ RUN mkdir -p /var/php
 COPY devops/docker/start.sh /
 RUN chmod +x /start.sh
 CMD sh /start.sh
-
 
 RUN apk add supervisor
 COPY devops/docker/supervisord.conf /etc/
