@@ -192,8 +192,8 @@ RUN rm -rf ${SOURCES_DIR}
 ENV PATH=$PATH:/usr/local/openresty/luajit/bin:/usr/local/openresty/nginx/sbin:/usr/local/openresty/bin
 
 RUN /usr/local/openresty/bin/openresty -V
-
-RUN sed -i "s|listen = 127.0.0.1:9000|listen = 127.0.0.1:9000\nlisten = /var/run/php-fpm/www.sock|g" /usr/local/etc/php-fpm.d/www.conf
+# Unix socket is not working yet
+RUN sed -i "s|listen = 127.0.0.1:9000|listen = 127.0.0.1:9000\nlisten = /var/run/php-fpm/php8-fpm.sock|g" /usr/local/etc/php-fpm.d/www.conf
 
 RUN php -v
 
