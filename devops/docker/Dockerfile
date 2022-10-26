@@ -1,53 +1,25 @@
-# PHP 7.x official image is pulled and then openresty compiled into single docker image openresty calling php over unix socket
-
-FROM php:7.4.26-fpm-alpine3.15
+FROM php:8.1-fpm-alpine3.16
 
 ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
 
 RUN chmod +x /usr/local/bin/install-php-extensions && sync && install-php-extensions \
-        gd \
-        xdebug \
-        @composer \
-        intl \
-        mcrypt \
-        memcache \
-        mysqli \
-        xlswriter \
-        uuid \
-        zip \
-        yaml \
-	mailparse
-
-# Custom php.ini config
-#COPY devops/docker/php/php.ini /usr/local/etc/php/php.ini
-
-COPY devops/docker/php/php-fpm-7.conf /usr/local/etc/php-fpm.conf
-COPY devops/docker/php/php.ini /usr/local/etc/php/php.ini
-
-# Compile Openresty from source
-
-# Dockerfile - alpine
-# https://github.com/openresty/docker-openresty
+    gd \
+    xdebug \
+    @composer \
+    intl \
+    mcrypt \
+    memcache \
+    mysqli \
+    xlswriter \
+    uuid \
+    zip \
+    yaml \
+    mailparse
 
 ARG RESTY_IMAGE_BASE="alpine"
-ARG RESTY_IMAGE_TAG="3.15"
-
-#FROM ${RESTY_IMAGE_BASE}:${RESTY_IMAGE_TAG} done in php
-
-LABEL maintainer="Balinder Walia <bwalia@tenthmatrix.co.uk>"
-
-# ensure www-data user exists
-#RUN set -x ; \
-  #addgroup -g 82 -S www-data ; \
-  #adduser -u 82 -D -S -G www-data www-data && exit 0 ; exit 1
-
-#Prepare dir for PHP unix socket etc
-COPY devops/docker/setup.sh /
-RUN chmod +x /setup.sh
-RUN sh /setup.sh
-
+ARG RESTY_IMAGE_TAG="3.16"
 # Docker Build Arguments
-ARG RESTY_VERSION="1.19.9.1"
+ARG RESTY_VERSION="1.21.4.1"
 ARG RESTY_OPENSSL_VERSION="1.1.1i"
 ARG RESTY_OPENSSL_PATCH_VERSION="1.1.1f"
 ARG RESTY_OPENSSL_URL_BASE="https://www.openssl.org/source"
@@ -92,6 +64,53 @@ ARG RESTY_ADD_PACKAGE_RUNDEPS=""
 ARG RESTY_EVAL_PRE_CONFIGURE=""
 ARG RESTY_EVAL_POST_MAKE=""
 
+RUN apk update && \
+    apk add --no-cache --virtual \
+    build-base \
+    coreutils \
+    curl \
+    bash \
+    gd-dev \
+    geoip-dev \
+    libxslt-dev \
+    linux-headers \
+    make \
+    perl-dev \
+    readline-dev \
+    zlib-dev \
+    gd \
+    geoip \
+    libgcc \
+    libxslt \
+    patch \
+    zlib \
+    vim \
+    git \
+    g++ 
+    
+
+RUN php -v
+
+ARG SOURCES_DIR="/src"
+
+RUN mkdir -p ${SOURCES_DIR} && cd ${SOURCES_DIR}
+
+ARG LOGS_DIR="/var/log/nginx"
+RUN mkdir -p ${LOGS_DIR}
+
+WORKDIR ${SOURCES_DIR}
+
+RUN cd ${SOURCES_DIR} && wget https://openresty.org/download/openresty-1.11.2.5.tar.gz -O ${SOURCES_DIR}/openresty-1.11.2.5.tar.gz \
+    && tar -zxvf ${SOURCES_DIR}/openresty-1.11.2.5.tar.gz
+# \
+#&& ls -la ${SOURCES_DIR}/openresty-1.11.2.5/patches/openssl-1.0.2h-sess_set_get_cb_yield.patch    
+
+RUN cd ${SOURCES_DIR} && wget https://www.openssl.org/source/openssl-1.0.2k.tar.gz -O ${SOURCES_DIR}/openssl-1.0.2k.tar.gz \
+    && tar -zvxf ${SOURCES_DIR}/openssl-1.0.2k.tar.gz \
+    && cd ${SOURCES_DIR}/openssl-1.0.2k \
+    && patch -p1 < ${SOURCES_DIR}/openresty-1.11.2.5/patches/openssl-1.0.2h-sess_set_get_cb_yield.patch
+#     && ls -la ${SOURCES_DIR}/openresty-1.11.2.5/patches/openssl-1.0.2h-sess_set_get_cb_yield.patch
+
 # These are not intended to be user-specified
 ARG _RESTY_CONFIG_DEPS="--with-pcre \
     --with-cc-opt='-DNGX_LUA_ABORT_AT_PANIC -I/usr/local/openresty/pcre/include -I/usr/local/openresty/openssl/include' \
@@ -113,123 +132,66 @@ LABEL resty_add_package_rundeps="${RESTY_ADD_PACKAGE_RUNDEPS}"
 LABEL resty_eval_pre_configure="${RESTY_EVAL_PRE_CONFIGURE}"
 LABEL resty_eval_post_make="${RESTY_EVAL_POST_MAKE}"
 
-#install aws cli so we can interact with s3
-RUN apk add --no-cache \
-        python3 \
-        py3-pip \
-    && pip3 install --upgrade pip \
-    && pip3 install \
-        awscli \
-    && rm -rf /var/cache/apk/*
+RUN cd ${SOURCES_DIR} \
+    && curl -fSL https://edgeone-public.s3.eu-west-2.amazonaws.com${SOURCES_DIR}/pcre/pcre-${RESTY_PCRE_VERSION}.tar.gz -o ${SOURCES_DIR}/pcre-${RESTY_PCRE_VERSION}.tar.gz \
+    && tar xzf ${SOURCES_DIR}/pcre-${RESTY_PCRE_VERSION}.tar.gz \
+    && cd ${SOURCES_DIR}/pcre-${RESTY_PCRE_VERSION} \
+    && ./configure \
+    --prefix=/usr/local/openresty/pcre \
+    --disable-cpp \
+    --enable-jit \
+    --enable-utf \
+    --enable-unicode-properties \
+    && make -j${RESTY_J} \
+    && make -j${RESTY_J} install
 
-RUN aws --version   # Just to make sure its installed alright
-
-
-RUN apk add --no-cache --virtual .build-deps \
-        build-base \
-        coreutils \
-        curl \
-        gd-dev \
-        geoip-dev \
-        libxslt-dev \
-        linux-headers \
-        make \
-        perl-dev \
-        readline-dev \
-        zlib-dev \
-        ${RESTY_ADD_PACKAGE_BUILDDEPS} \
-    && apk add --no-cache \
-        gd \
-        geoip \
-        libgcc \
-        libxslt \
-        zlib \
-        ${RESTY_ADD_PACKAGE_RUNDEPS} \
-    && cd /tmp \
-    && if [ -n "${RESTY_EVAL_PRE_CONFIGURE}" ]; then eval $(echo ${RESTY_EVAL_PRE_CONFIGURE}); fi \
-    && cd /tmp \
-    && curl -fSL "${RESTY_OPENSSL_URL_BASE}/openssl-${RESTY_OPENSSL_VERSION}.tar.gz" -o openssl-${RESTY_OPENSSL_VERSION}.tar.gz \
-    && tar xzf openssl-${RESTY_OPENSSL_VERSION}.tar.gz \
-    && cd openssl-${RESTY_OPENSSL_VERSION} \
+RUN cd ${SOURCES_DIR} \
+    && curl -fSL "${RESTY_OPENSSL_URL_BASE}/openssl-${RESTY_OPENSSL_VERSION}.tar.gz" -o ${SOURCES_DIR}/openssl-${RESTY_OPENSSL_VERSION}.tar.gz \
+    && tar xzf ${SOURCES_DIR}/openssl-${RESTY_OPENSSL_VERSION}.tar.gz \
+    && cd ${SOURCES_DIR}/openssl-${RESTY_OPENSSL_VERSION} \
     && if [ $(echo ${RESTY_OPENSSL_VERSION} | cut -c 1-5) = "1.1.1" ] ; then \
-        echo 'patching OpenSSL 1.1.1 for OpenResty' \
-        && curl -s https://raw.githubusercontent.com/openresty/openresty/master/patches/openssl-${RESTY_OPENSSL_PATCH_VERSION}-sess_set_get_cb_yield.patch | patch -p1 ; \
+    echo 'patching OpenSSL 1.1.1 for OpenResty' \
+    && curl -s https://raw.githubusercontent.com/openresty/openresty/master/patches/openssl-${RESTY_OPENSSL_PATCH_VERSION}-sess_set_get_cb_yield.patch | patch -p1 ; \
     fi \
     && if [ $(echo ${RESTY_OPENSSL_VERSION} | cut -c 1-5) = "1.1.0" ] ; then \
-        echo 'patching OpenSSL 1.1.0 for OpenResty' \
-        && curl -s https://raw.githubusercontent.com/openresty/openresty/ed328977028c3ec3033bc25873ee360056e247cd/patches/openssl-1.1.0j-parallel_build_fix.patch | patch -p1 \
-        && curl -s https://raw.githubusercontent.com/openresty/openresty/master/patches/openssl-${RESTY_OPENSSL_PATCH_VERSION}-sess_set_get_cb_yield.patch | patch -p1 ; \
+    echo 'patching OpenSSL 1.1.0 for OpenResty' \
+    && curl -s https://raw.githubusercontent.com/openresty/openresty/ed328977028c3ec3033bc25873ee360056e247cd/patches/openssl-1.1.0j-parallel_build_fix.patch | patch -p1 \
+    && curl -s https://raw.githubusercontent.com/openresty/openresty/master/patches/openssl-${RESTY_OPENSSL_PATCH_VERSION}-sess_set_get_cb_yield.patch | patch -p1 ; \
     fi \
     && ./config \
-      no-threads shared zlib -g \
-      enable-ssl3 enable-ssl3-method \
-      --prefix=/usr/local/openresty/openssl \
-      --libdir=lib \
-      -Wl,-rpath,/usr/local/openresty/openssl/lib \
+    no-threads shared zlib -g \
+    enable-ssl3 enable-ssl3-method \
+    --prefix=/usr/local/openresty/openssl \
+    --libdir=lib \
+    -Wl,-rpath,/usr/local/openresty/openssl/lib \
     && make -j${RESTY_J} \
-    && make -j${RESTY_J} install_sw \
-    && cd /tmp \
-    && curl -fSL https://edgeone-public.s3.eu-west-2.amazonaws.com/src/pcre/pcre-${RESTY_PCRE_VERSION}.tar.gz -o pcre-${RESTY_PCRE_VERSION}.tar.gz \
-    && tar xzf pcre-${RESTY_PCRE_VERSION}.tar.gz \
-    && cd /tmp/pcre-${RESTY_PCRE_VERSION} \
-    && ./configure \
-        --prefix=/usr/local/openresty/pcre \
-        --disable-cpp \
-        --enable-jit \
-        --enable-utf \
-        --enable-unicode-properties \
-    && make -j${RESTY_J} \
-    && make -j${RESTY_J} install \
-    && cd /tmp \
-    && curl -fSL https://openresty.org/download/openresty-${RESTY_VERSION}.tar.gz -o openresty-${RESTY_VERSION}.tar.gz \
-    && tar xzf openresty-${RESTY_VERSION}.tar.gz \
-    && cd /tmp/openresty-${RESTY_VERSION} \
+    && make -j${RESTY_J} install_sw
+
+    RUN cd ${SOURCES_DIR} \
+    && curl -fSL https://openresty.org/download/openresty-${RESTY_VERSION}.tar.gz -o ${SOURCES_DIR}/openresty-${RESTY_VERSION}.tar.gz \
+    && tar xzf ${SOURCES_DIR}/openresty-${RESTY_VERSION}.tar.gz \
+    && cd ${SOURCES_DIR}/openresty-${RESTY_VERSION} \
     && eval ./configure -j${RESTY_J} ${_RESTY_CONFIG_DEPS} ${RESTY_CONFIG_OPTIONS} ${RESTY_CONFIG_OPTIONS_MORE} ${RESTY_LUAJIT_OPTIONS} \
     && make -j${RESTY_J} \
     && make -j${RESTY_J} install \
-    && cd /tmp \
+    && cd ${SOURCES_DIR} \
     && if [ -n "${RESTY_EVAL_POST_MAKE}" ]; then eval $(echo ${RESTY_EVAL_POST_MAKE}); fi \
-    && rm -rf \
-        openssl-${RESTY_OPENSSL_VERSION}.tar.gz openssl-${RESTY_OPENSSL_VERSION} \
-        pcre-${RESTY_PCRE_VERSION}.tar.gz pcre-${RESTY_PCRE_VERSION} \
-        openresty-${RESTY_VERSION}.tar.gz openresty-${RESTY_VERSION} \
-    && apk del .build-deps \
+#    && apk del .build-deps \
     && mkdir -p /var/run/openresty \
-    && ln -sf /dev/stdout /var/log/nginx/access.log \
-    && ln -sf /dev/stderr /var/log/nginx/error.log
+    && ln -sf /dev/stdout ${LOGS_DIR}/access.log \
+    && ln -sf /dev/stderr ${LOGS_DIR}/error.log
 
-
+RUN rm -rf ${SOURCES_DIR}
 # Add additional binaries into PATH for convenience
 ENV PATH=$PATH:/usr/local/openresty/luajit/bin:/usr/local/openresty/nginx/sbin:/usr/local/openresty/bin
 
-CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;"]
+RUN /usr/local/openresty/bin/openresty -V
 
-# Copy nginx configuration files
-COPY devops/docker/nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
-COPY devops/docker/index.php /usr/local/openresty/nginx/html/index.php
-#COPY tenants_infra_manager /var/www/html/tenants_infra_manager/
-COPY devops/docker/index.php /var/www/html/index.php 
+RUN php -v
 
-# Change permissions in directory /var/www/html to belong to www-data (PHP) 
-RUN chown -R www-data:www-data /var/www/html
-# Set permissions to allow only user www-data (PHP) to access 
-RUN chmod 755 /var/www/html/
 
-COPY devops/docker/php-fpm-7.conf /usr/local/etc/php-fpm.conf
-COPY devops/docker/php.ini /usr/local/etc/php/conf.d/php.ini
-
-#Prepare dir for PHP unix socket etc
-COPY devops/docker/setup.sh /
-RUN chmod +x /setup.sh
-RUN sh /setup.sh
-
-WORKDIR /var/www/html
-
-RUN mkdir -p /var/php
-
-COPY devops/docker/start.sh /
-RUN chmod +x /start.sh
-CMD sh /start.sh
+#CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;"]
+#CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;", "php-fpm --nodaemonize"]
 
 RUN apk add supervisor
 COPY devops/docker/supervisord.conf /etc/
@@ -242,4 +204,3 @@ EXPOSE 80
 # See https://github.com/openresty/docker-openresty/blob/master/README.md#tips--pitfalls
 
 STOPSIGNAL SIGQUIT
-
