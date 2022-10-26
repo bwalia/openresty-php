@@ -29,7 +29,7 @@ on:
 jobs:
   build:
 
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     # self hosted runner runs this job on Edgeone Ubuntu Server
     steps:
 
