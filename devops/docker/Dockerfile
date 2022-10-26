@@ -95,6 +95,7 @@ ARG SOURCES_DIR="/src"
 
 RUN mkdir -p ${SOURCES_DIR} && cd ${SOURCES_DIR}
 
+ARG PHP_SOCKET_DIR="/var/run/php-fpm"
 ARG LOGS_DIR="/var/log/nginx"
 RUN mkdir -p ${LOGS_DIR}
 
@@ -178,10 +179,15 @@ RUN cd ${SOURCES_DIR} \
     && if [ -n "${RESTY_EVAL_POST_MAKE}" ]; then eval $(echo ${RESTY_EVAL_POST_MAKE}); fi \
 #    && apk del .build-deps \
     && mkdir -p /var/run/openresty \
+    && mkdir -p ${PHP_SOCKET_DIR} \
     && ln -sf /dev/stdout ${LOGS_DIR}/access.log \
     && ln -sf /dev/stderr ${LOGS_DIR}/error.log
-
+# Reset permissions for php unix sockets.
+RUN chown www-data:root ${PHP_SOCKET_DIR}
+RUN chmod +x ${PHP_SOCKET_DIR}
+RUN chmod 777 -R ${PHP_SOCKET_DIR}
 RUN rm -rf ${SOURCES_DIR}
+
 # Add additional binaries into PATH for convenience
 ENV PATH=$PATH:/usr/local/openresty/luajit/bin:/usr/local/openresty/nginx/sbin:/usr/local/openresty/bin
 
