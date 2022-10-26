@@ -193,8 +193,9 @@ ENV PATH=$PATH:/usr/local/openresty/luajit/bin:/usr/local/openresty/nginx/sbin:/
 
 RUN /usr/local/openresty/bin/openresty -V
 
-RUN php -v
+RUN sed -i "s|listen = 127.0.0.1:9000|listen = 127.0.0.1:9000\nlisten = /var/run/php-fpm/www.sock|g" /usr/local/etc/php-fpm.d/www.conf
 
+RUN php -v
 
 #CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;"]
 #CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;", "php-fpm --nodaemonize"]
