@@ -1,0 +1,58 @@
+name: "(Prod) Openresty PHP Build Docker image and Test Deployment pipeline"
+
+# Description: This workflow Builds and Deploys Openresty PHP as Unix socket and push in Docker Registry
+# environments, both in test or Prod.
+# software.
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "feature/main*" ]
+
+  workflow_dispatch:
+    inputs:
+      workflow_action:
+        type: choice
+        description: 'Please choose the action for openresty php docker image'
+        default: 'deploy'
+        required: true
+        options:
+        - deploy
+        - delete
+        - rollback
+        - Choose
+
+# permissions:
+#   contents: read
+
+jobs:
+  build:
+
+    runs-on: self-hosted
+    # self hosted runner runs this job on Edgeone Ubuntu Server
+    steps:
+
+    - name: Check out this repo code
+      uses: actions/checkout@v3
+      with:
+        ref: main
+        clean: true
+
+    - name: Run bash script to build the docker image and deployment
+      run: |
+          chmod +x ./build.sh
+          ./build.sh
+      shell: bash
+
+    - name: Slack Notification for Workstation CRM release 
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_CHANNEL: general
+        SLACK_COLOR: ${{ job.status }}
+        SLACK_ICON: https://github.com/rtCamp.png?size=48
+        SLACK_MESSAGE: 'Post Content :rocket:'
+        SLACK_TITLE: Post Title
+        SLACK_USERNAME: rtCamp
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
