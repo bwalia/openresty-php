@@ -198,12 +198,12 @@ RUN sed -i "s|listen = 127.0.0.1:9000|listen = 127.0.0.1:9000\nlisten = /var/run
 RUN php -v
 
 #CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;"]
-#CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;", "php-fpm --nodaemonize"]
+CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;", "php-fpm --nodaemonize"]
 
-RUN apk add supervisor
-COPY devops/docker/supervisord.conf /etc/
+# RUN apk add supervisor
+# COPY devops/docker/supervisord.conf /etc/
 
-ENTRYPOINT /usr/bin/supervisord -c /etc/supervisord.conf
+#ENTRYPOINT /usr/bin/supervisord -c /etc/supervisord.conf
 
 EXPOSE 80
 
