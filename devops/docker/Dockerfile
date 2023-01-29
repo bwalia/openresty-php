@@ -185,7 +185,7 @@ RUN cd ${SOURCES_DIR} \
 # Reset permissions for php unix sockets.
 RUN chown www-data:root ${PHP_SOCKET_DIR}
 RUN chmod +x ${PHP_SOCKET_DIR}
-RUN chmod 777 -R ${PHP_SOCKET_DIR}
+RUN chmod 750 -R ${PHP_SOCKET_DIR}
 RUN rm -rf ${SOURCES_DIR}
 
 # Add additional binaries into PATH for convenience
@@ -193,7 +193,8 @@ ENV PATH=$PATH:/usr/local/openresty/luajit/bin:/usr/local/openresty/nginx/sbin:/
 
 RUN /usr/local/openresty/bin/openresty -V
 # Unix socket is not working yet
-RUN sed -i "s|listen = 127.0.0.1:9000|listen = 127.0.0.1:9000\nlisten = /var/run/php-fpm/php8-fpm.sock|g" /usr/local/etc/php-fpm.d/www.conf
+#RUN sed -i "s|listen = 127.0.0.1:9000|listen = 127.0.0.1:9000\nlisten = /var/run/php-fpm/php8-fpm.sock|g" /usr/local/etc/php-fpm.d/www.conf
+RUN sed -i "s|listen = 9000|listen = /var/run/php-fpm/php8-fpm.sock|g" /usr/local/etc/php-fpm.d/zz-docker.conf
 
 RUN php -v
 
