@@ -185,7 +185,7 @@ RUN cd ${SOURCES_DIR} \
 # Reset permissions for php unix sockets.
 RUN chown www-data:root ${PHP_SOCKET_DIR}
 RUN chmod +x ${PHP_SOCKET_DIR}
-RUN chmod 750 -R ${PHP_SOCKET_DIR}
+RUN chmod 777 -R ${PHP_SOCKET_DIR}
 RUN rm -rf ${SOURCES_DIR}
 
 # Add additional binaries into PATH for convenience
@@ -199,12 +199,11 @@ RUN sed -i "s|listen = 9000|listen = /var/run/php-fpm/php8-fpm.sock|g" /usr/loca
 RUN php -v
 
 #CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;"]
-CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;", "php-fpm --nodaemonize"]
 
-# RUN apk add supervisor
-# COPY devops/docker/supervisord.conf /etc/
+RUN apk add supervisor
+COPY devops/docker/supervisord.conf /etc/
 
-#ENTRYPOINT /usr/bin/supervisord -c /etc/supervisord.conf
+ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
 
 EXPOSE 80
 
