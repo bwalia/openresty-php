@@ -101,16 +101,16 @@ RUN mkdir -p ${LOGS_DIR}
 
 WORKDIR ${SOURCES_DIR}
 
-RUN cd ${SOURCES_DIR} && wget https://openresty.org/download/openresty-${RESTY_VERSION}.tar.gz -O ${SOURCES_DIR}/openresty-{1.11.2.5}.tar.gz \
+RUN cd ${SOURCES_DIR} && wget https://openresty.org/download/openresty-${RESTY_VERSION}.tar.gz -O ${SOURCES_DIR}/openresty-${RESTY_VERSION}.tar.gz \
     && tar -zxvf ${SOURCES_DIR}/openresty-${RESTY_VERSION}.tar.gz
 # \
-#&& ls -la ${SOURCES_DIR}/openresty-1.11.2.5/patches/openssl-1.0.2h-sess_set_get_cb_yield.patch    
+#&& ls -la ${SOURCES_DIR}/openresty-${RESTY_VERSION}/patches/openssl-1.0.2h-sess_set_get_cb_yield.patch    
 
 RUN cd ${SOURCES_DIR} && wget https://www.openssl.org/source/openssl-1.0.2k.tar.gz -O ${SOURCES_DIR}/openssl-1.0.2k.tar.gz \
     && tar -zvxf ${SOURCES_DIR}/openssl-1.0.2k.tar.gz \
     && cd ${SOURCES_DIR}/openssl-1.0.2k \
-    && patch -p1 < ${SOURCES_DIR}/openresty-1.11.2.5/patches/openssl-1.0.2h-sess_set_get_cb_yield.patch
-#     && ls -la ${SOURCES_DIR}/openresty-1.11.2.5/patches/openssl-1.0.2h-sess_set_get_cb_yield.patch
+    && patch -p1 < ${SOURCES_DIR}/openresty-${RESTY_VERSION}/patches/openssl-1.0.2h-sess_set_get_cb_yield.patch
+#     && ls -la ${SOURCES_DIR}/openresty-${RESTY_VERSION}/patches/openssl-1.0.2h-sess_set_get_cb_yield.patch
 
 # These are not intended to be user-specified
 ARG _RESTY_CONFIG_DEPS="--with-pcre \
