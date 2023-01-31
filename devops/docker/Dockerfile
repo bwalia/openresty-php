@@ -101,8 +101,8 @@ RUN mkdir -p ${LOGS_DIR}
 
 WORKDIR ${SOURCES_DIR}
 
-RUN cd ${SOURCES_DIR} && wget https://openresty.org/download/openresty-1.11.2.5.tar.gz -O ${SOURCES_DIR}/openresty-1.11.2.5.tar.gz \
-    && tar -zxvf ${SOURCES_DIR}/openresty-1.11.2.5.tar.gz
+RUN cd ${SOURCES_DIR} && wget https://openresty.org/download/openresty-${RESTY_VERSION}.tar.gz -O ${SOURCES_DIR}/openresty-{1.11.2.5}.tar.gz \
+    && tar -zxvf ${SOURCES_DIR}/openresty-${RESTY_VERSION}.tar.gz
 # \
 #&& ls -la ${SOURCES_DIR}/openresty-1.11.2.5/patches/openssl-1.0.2h-sess_set_get_cb_yield.patch    
 
@@ -183,7 +183,7 @@ RUN cd ${SOURCES_DIR} \
     && ln -sf /dev/stdout ${LOGS_DIR}/access.log \
     && ln -sf /dev/stderr ${LOGS_DIR}/error.log
 # Reset permissions for php unix sockets.
-RUN chown www-data:root ${PHP_SOCKET_DIR}
+RUN chown www-data:www-data ${PHP_SOCKET_DIR}
 RUN chmod +x ${PHP_SOCKET_DIR}
 RUN chmod 777 -R ${PHP_SOCKET_DIR}
 RUN rm -rf ${SOURCES_DIR}
@@ -193,17 +193,18 @@ ENV PATH=$PATH:/usr/local/openresty/luajit/bin:/usr/local/openresty/nginx/sbin:/
 
 RUN /usr/local/openresty/bin/openresty -V
 # Unix socket is not working yet
-#RUN sed -i "s|listen = 127.0.0.1:9000|listen = 127.0.0.1:9000\nlisten = /var/run/php-fpm/php8-fpm.sock|g" /usr/local/etc/php-fpm.d/www.conf
-RUN sed -i "s|listen = 9000|listen = /var/run/php-fpm/php8-fpm.sock|g" /usr/local/etc/php-fpm.d/zz-docker.conf
+RUN sed -i "s|listen = 127.0.0.1:9000|listen = 9000\nlisten = /var/run/php-fpm/php8-fpm.sock|g" /usr/local/etc/php-fpm.d/www.conf
 
 RUN php -v
 
 #CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;"]
+#CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;", "php-fpm --nodaemonize"]
 
 RUN apk add supervisor
 COPY devops/docker/supervisord.conf /etc/
 
-ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
+ENTRYPOINT /usr/bin/supervisord -c /etc/supervisord.conf
+COPY index.php /usr/local/openresty/nginx/html/index.php
 
 EXPOSE 80
 
