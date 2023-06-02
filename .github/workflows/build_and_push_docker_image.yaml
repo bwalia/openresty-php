@@ -23,14 +23,14 @@ jobs:
     - name: docker login
       env:
         DOCKER_USER: ${{ secrets.DOCKER_USER }}
-        DOCKER_PASSWD: ${{ secrets.DOCKER_PASSWD }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWD }}
       run: |
-        docker login -u $DOCKER_USER -p $DOCKER_PASSWD
+        docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
 
     - name: Build Openresty PHP Public Docker Image
       env:
         DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
-        DOCKER_PASSWD: ${{ secrets.DOCKER_PASSWD }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWD }}
       run: |
         docker build -f devops/docker/Dockerfile -t openresty-php .
         docker tag openresty-php:latest $DOCKER_USER/openresty-php:latest
