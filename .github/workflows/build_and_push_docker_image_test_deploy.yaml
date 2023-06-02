@@ -6,9 +6,9 @@ name: "(Prod) Openresty PHP Build Docker image and Test Deployment pipeline"
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "dummy" ]
   pull_request:
-    branches: [ "feature/main*" ]
+    branches: [ "feature/dummy*" ]
 
   workflow_dispatch:
     inputs:
