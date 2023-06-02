@@ -17,3 +17,6 @@ set -x
 docker build -f devops/docker/Dockerfile -t openresty-php .
 docker tag openresty-php:latest registry.workstation.co.uk/openresty-php:latest
 docker push registry.workstation.co.uk/openresty-php:latest
+
+# Push to docker public registry as well
+docker tag openresty-php:latest bwalia/openresty-php:latest && docker push bwalia/openresty-php:latest

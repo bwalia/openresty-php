@@ -193,18 +193,34 @@ ENV PATH=$PATH:/usr/local/openresty/luajit/bin:/usr/local/openresty/nginx/sbin:/
 
 RUN /usr/local/openresty/bin/openresty -V
 # Unix socket is not working yet
-RUN sed -i "s|listen = 127.0.0.1:9000|listen = 9000\nlisten = /var/run/php-fpm/php8-fpm.sock|g" /usr/local/etc/php-fpm.d/www.conf
+
+RUN sed -i "s|listen = 9000|listen = /var/run/php-fpm/php8-fpm.sock|g" /usr/local/etc/php-fpm.d/zz-docker.conf
+RUN sed -i "s|listen = /var/run/php-fpm/php8-fpm.sock|listen = /var/run/php-fpm/php8-fpm.sock\nlisten.owner = www-data|g" /usr/local/etc/php-fpm.d/zz-docker.conf
+RUN sed -i "s|listen = /var/run/php-fpm/php8-fpm.sock|listen = /var/run/php-fpm/php8-fpm.sock\nlisten.group = www-data|g" /usr/local/etc/php-fpm.d/zz-docker.conf
+RUN sed -i "s|listen = /var/run/php-fpm/php8-fpm.sock|listen = /var/run/php-fpm/php8-fpm.sock\nlisten.mode = 0660|g" /usr/local/etc/php-fpm.d/zz-docker.conf
+
+#  && sed -E -i -e 's/;__REPLACE_ME__/\n;__REPLACE_ME__/' /usr/local/etc/php-fpm.d/zz-docker.conf \
+#  && sed -E -i -e 's/;__REPLACE_ME__/\n;__REPLACE_ME__/' /usr/local/etc/php-fpm.d/zz-docker.conf \
+#  && sed -E -i -e 's/;__REPLACE_ME__/\n;__REPLACE_ME__/' /usr/local/etc/php-fpm.d/zz-docker.conf
+
+
+#\nlisten.owner = www-data\nlisten.group = www-data\nlisten.mode = 0660\n
 
 RUN php -v
 
 #CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;"]
 #CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;", "php-fpm --nodaemonize"]
+COPY devops/docker/php/index.php /usr/local/openresty/nginx/html/
+COPY devops/docker/nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
 
 RUN apk add supervisor
 COPY devops/docker/supervisord.conf /etc/
 
-ENTRYPOINT /usr/bin/supervisord -c /etc/supervisord.conf
-COPY index.php /usr/local/openresty/nginx/html/index.php
+#ENTRYPOINT [/usr/bin/supervisord -c /etc/supervisord.conf]
+COPY devops/docker/start.sh ${SOURCES_DIR}/start.sh
+RUN chmod +x ${SOURCES_DIR}/start.sh
+#CMD ["/bin/bash", "-c", "/usr/bin/supervisord -c /etc/supervisord.conf ; chmod 777 ${PHP_SOCKET_DIR}/php8-fpm.sock"]
+ENTRYPOINT ["bash","-c","/src/start.sh"]
 
 EXPOSE 80
 
