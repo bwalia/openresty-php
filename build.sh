@@ -14,6 +14,7 @@ set -x
 #   echo "openresty-php docker image version not set"
 #   exit 1
 # fi
+
 docker build -f devops/docker/Dockerfile -t openresty-php .
 docker tag openresty-php:latest registry.workstation.co.uk/openresty-php:latest
 docker push registry.workstation.co.uk/openresty-php:latest

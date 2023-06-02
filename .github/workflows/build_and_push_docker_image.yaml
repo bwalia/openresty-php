@@ -1,8 +1,4 @@
-name: "(Prod) Openresty PHP Build Docker image and Test Deployment pipeline"
-
-# Description: This workflow Builds and Deploys Openresty PHP as Unix socket and push in Docker Registry
-# environments, both in test or Prod.
-# software.
+name: Openresty PHP Docker Image CI
 
 on:
   push:
@@ -10,40 +6,39 @@ on:
   pull_request:
     branches: [ "feature/main*" ]
 
-  workflow_dispatch:
-    inputs:
-      workflow_action:
-        type: choice
-        description: 'Please choose the action for openresty php docker image'
-        default: 'deploy'
-        required: true
-        options:
-        - deploy
-        - delete
-        - rollback
-        - Choose
+  # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 
-# permissions:
-#   contents: read
+env:
+  #image_tag: $(date +%m-%d-%Y)
+  image_tag: latest
 
 jobs:
+  # This workflow contains a single job called build
   build:
-
+    # The type of runner that the job will run on
     runs-on: ubuntu-latest
-    # self hosted runner runs this job on Edgeone Ubuntu Server
+    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-
-    - name: Check out this repo code
-      uses: actions/checkout@v3
-      with:
-        ref: main
-        clean: true
-
-    - name: Run bash script to build the docker image and deployment
+    - uses: actions/checkout@v2
+    - name: docker login
+      env:
+        DOCKER_USER: ${{ secrets.DOCKER_USER }}
+        DOCKER_PASSWD: ${{ secrets.DOCKER_PASSWD }}
       run: |
-          chmod +x ./build.sh
-          ./build.sh
-      shell: bash
+        docker login -u $DOCKER_USER -p $DOCKER_PASSWD
+
+    - name: Build Openresty PHP Public Docker Image
+      env:
+        DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWD: ${{ secrets.DOCKER_PASSWD }}
+      run: |
+        docker build -f devops/docker/Dockerfile -t openresty-php .
+        docker tag openresty-php:latest $DOCKER_USER/openresty-php:latest
+
+    - name: Docker Push Openresty PHP Public Docker Image
+      env:
+        DOCKER_USER: ${{ secrets.DOCKER_USER}}
+      run: docker push $DOCKER_USER/openresty-php:${{ env.image_tag }}
 
     - name: Slack Notification for Workstation CRM release 
       uses: rtCamp/action-slack-notify@v2
@@ -55,4 +50,3 @@ jobs:
         SLACK_TITLE: Post Title
         SLACK_USERNAME: rtCamp
         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-
