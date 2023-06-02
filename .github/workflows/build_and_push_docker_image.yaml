@@ -1,4 +1,4 @@
-name: Openresty Alpine Docker Image CI
+name: Openresty PHP Docker Image CI
 
 on:
   push:
@@ -27,7 +27,7 @@ jobs:
       run: |
         docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
 
-    - name: Build Openresty Alpine Public Docker Image
+    - name: Build Openresty PHP Public Docker Image
       env:
         DOCKER_USER: ${{ secrets.DOCKER_USER }}
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD}}
@@ -35,7 +35,7 @@ jobs:
         docker build -f devops/docker/Dockerfile -t openresty-php .
         docker tag openresty-php:latest $DOCKER_USER/openresty-php:latest
 
-    - name: Docker Push Openresty Alpine Public Docker Image
+    - name: Docker Push Openresty PHP Public Docker Image
       env:
         DOCKER_USER: ${{ secrets.DOCKER_USER}}
       run: docker push $DOCKER_USER/openresty-php:${{ env.image_tag }}
