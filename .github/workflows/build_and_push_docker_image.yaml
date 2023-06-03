@@ -36,13 +36,6 @@ jobs:
         docker tag openresty-php:latest $DOCKER_USER/openresty-php:latest
         docker push $DOCKER_USER/openresty-php:${{ env.image_tag }}
 
-    - name: Push Openresty PHP Public Docker Image Push as latest timestamp tag
-      env:
-        DOCKER_USER: ${{ secrets.DOCKER_USER}}
-      run: |
-        docker tag openresty-php:latest $DOCKER_USER/openresty-php:{{ env.image_updated_ts }}
-        docker push $DOCKER_USER/openresty-php:{{ env.image_updated_ts }}
-
     - name: Slack Notification for Workstation CRM release 
       uses: rtCamp/action-slack-notify@v2
       env:
