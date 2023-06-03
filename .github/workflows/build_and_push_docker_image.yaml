@@ -9,7 +9,7 @@ on:
   # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 
 env:
-  #image_tag: $(date +%m-%d-%Y)
+  image_updated_ts: $(date +%m-%d-%Y)
   image_tag: latest
 
 jobs:
@@ -27,18 +27,21 @@ jobs:
       run: |
         docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
 
-    - name: Build Openresty PHP Public Docker Image
+    - name: Build Openresty PHP Public Docker Image and Push as latest tag
       env:
         DOCKER_USER: ${{ secrets.DOCKER_USER }}
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD}}
       run: |
         docker build -f devops/docker/Dockerfile -t openresty-php .
         docker tag openresty-php:latest $DOCKER_USER/openresty-php:latest
+        docker push $DOCKER_USER/openresty-php:${{ env.image_tag }}
 
-    - name: Docker Push Openresty PHP Public Docker Image
+    - name: Push Openresty PHP Public Docker Image Push as latest timestamp tag
       env:
         DOCKER_USER: ${{ secrets.DOCKER_USER}}
-      run: docker push $DOCKER_USER/openresty-php:${{ env.image_tag }}
+      run: |
+        docker tag openresty-php:latest $DOCKER_USER/openresty-php:{{ env.image_updated_ts }}
+        docker push $DOCKER_USER/openresty-php:{{ env.image_updated_ts }}
 
     - name: Slack Notification for Workstation CRM release 
       uses: rtCamp/action-slack-notify@v2
